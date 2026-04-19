@@ -229,19 +229,27 @@
 
         async function fetchPrices() {
             try {
-                const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,litecoin&vs_currencies=usd&include_24hr_change=true');
-                const data = await response.json();
+                // Используем Binance API (поддерживает CORS)
+                const [btcRes, ethRes, ltcRes] = await Promise.all([
+                    fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT'),
+                    fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=ETHUSDT'),
+                    fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=LTCUSDT')
+                ]);
+                
+                const btc = await btcRes.json();
+                const eth = await ethRes.json();
+                const ltc = await ltcRes.json();
                 
                 const prices = {
-                    bitcoin: data.bitcoin.usd,
-                    ethereum: data.ethereum.usd,
-                    litecoin: data.litecoin.usd
+                    bitcoin: parseFloat(btc.lastPrice),
+                    ethereum: parseFloat(eth.lastPrice),
+                    litecoin: parseFloat(ltc.lastPrice)
                 };
                 
                 const changes = {
-                    bitcoin: data.bitcoin.usd_24h_change,
-                    ethereum: data.ethereum.usd_24h_change,
-                    litecoin: data.litecoin.usd_24h_change
+                    bitcoin: parseFloat(btc.priceChangePercent),
+                    ethereum: parseFloat(eth.priceChangePercent),
+                    litecoin: parseFloat(ltc.priceChangePercent)
                 };
 
                 // Рассчитываем общее изменение
@@ -283,17 +291,17 @@
 
                 // Время обновления
                 const now = new Date();
-                document.getElementById('update-time').innerHTML = `Обновлено: <span class="last-updated">${now.toLocaleString('ru-RU')}</span> • Автообновление каждые 30 сек`;
+                document.getElementById('update-time').innerHTML = `Обновлено: <span class="last-updated">${now.toLocaleString('ru-RU')}</span> • Автообновление каждые 10 сек`;
                 
             } catch (error) {
                 console.error('Ошибка загрузки:', error);
-                document.getElementById('update-time').textContent = 'Ошибка загрузки данных. Повтор через 30 сек...';
+                document.getElementById('update-time').textContent = 'Ошибка загрузки данных. Повтор через 10 сек...';
             }
         }
 
-        // Загружаем сразу и обновляем каждые 30 секунд
+        // Загружаем сразу и обновляем каждые 10 секунд
         fetchPrices();
-        setInterval(fetchPrices, 30000);
+        setInterval(fetchPrices, 10000);
     </script>
 </body>
 </html>
