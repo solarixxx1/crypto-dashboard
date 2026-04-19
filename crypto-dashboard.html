@@ -229,28 +229,28 @@
 
         async function fetchPrices() {
             try {
-                // Используем CryptoCompare API (поддерживает CORS)
-                const response = await fetch('https://min-api.cryptocompare.com/data/pricemulti?fsyms=BTC,ETH,LTC&tsyms=USD');
-                const data = await response.json();
+                // Используем Coinbase API (поддерживает CORS)
+                const [btcRes, ethRes, ltcRes] = await Promise.all([
+                    fetch('https://api.coinbase.com/v2/prices/BTC-USD/spot'),
+                    fetch('https://api.coinbase.com/v2/prices/ETH-USD/spot'),
+                    fetch('https://api.coinbase.com/v2/prices/LTC-USD/spot')
+                ]);
                 
-                // Получаем 24h изменение отдельным запросом
-                const changeResponse = await fetch('https://min-api.cryptocompare.com/data/v2/histoday?fsym=BTC&tsym=USD&limit=1');
-                const changeData = await changeResponse.json();
-                
-                const btcChange = changeData.Data.Data[0].close > changeData.Data.Data[0].open ? 
-                    ((changeData.Data.Data[0].close - changeData.Data.Data[0].open) / changeData.Data.Data[0].open * 100) : 0;
+                const btc = await btcRes.json();
+                const eth = await ethRes.json();
+                const ltc = await ltcRes.json();
                 
                 const prices = {
-                    bitcoin: data.BTC.USD,
-                    ethereum: data.ETH.USD,
-                    litecoin: data.LTC.USD
+                    bitcoin: parseFloat(btc.data.amount),
+                    ethereum: parseFloat(eth.data.amount),
+                    litecoin: parseFloat(ltc.data.amount)
                 };
                 
-                // Используем одинаковое изменение для всех (упрощенно)
+                // Изменение (упрощенно - пока 0, можно добавить историю)
                 const changes = {
-                    bitcoin: btcChange,
-                    ethereum: btcChange * 0.8, // примерное
-                    litecoin: btcChange * 0.6
+                    bitcoin: 0,
+                    ethereum: 0,
+                    litecoin: 0
                 };
 
                 // Рассчитываем общее изменение
@@ -274,21 +274,16 @@
                     document.getElementById(`${crypto}-value`).textContent = `$${value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
                     
                     const changeEl = document.getElementById(`${crypto}-change`);
-                    const changeClass = change >= 0 ? 'change-positive' : 'change-negative';
-                    const arrow = change >= 0 ? '↑' : '↓';
-                    changeEl.className = `asset-change ${changeClass}`;
-                    changeEl.textContent = `${arrow} ${Math.abs(change).toFixed(2)}% за 24ч`;
+                    changeEl.className = 'asset-change';
+                    changeEl.textContent = 'Курс обновлён';
                 });
 
                 // Обновляем общий баланс
                 document.getElementById('total-amount').textContent = `$${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
                 
-                const totalChange = ((totalValue - totalPrevValue) / totalPrevValue) * 100;
                 const totalChangeEl = document.getElementById('total-change');
-                const totalChangeClass = totalChange >= 0 ? 'change-positive' : 'change-negative';
-                const totalArrow = totalChange >= 0 ? '↑' : '↓';
-                totalChangeEl.className = totalChangeClass;
-                totalChangeEl.textContent = `${totalArrow} ${Math.abs(totalChange).toFixed(2)}% за 24ч`;
+                totalChangeEl.className = 'change-positive';
+                totalChangeEl.textContent = 'Курс обновлён в реальном времени';
 
                 // Время обновления
                 const now = new Date();
